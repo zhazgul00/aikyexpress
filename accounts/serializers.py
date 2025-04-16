@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import CustomUser, Driver, Store, Warehouse
+from .models import CustomUser
 from django.contrib.auth.password_validation import validate_password
 
 class RegisterSerializer(serializers.ModelSerializer):
@@ -24,3 +24,6 @@ class RegisterSerializer(serializers.ModelSerializer):
         user.set_password(password)
         user.save()
         return user
+
+
+

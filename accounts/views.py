@@ -18,7 +18,6 @@ class RegisterAPIView(APIView):
         if serializer.is_valid():
             user = serializer.save()
             
-            # Дополнительные поля по роли
             if role == 'driver':
                 Driver.objects.create(
                     user=user,
@@ -78,3 +77,67 @@ class DashboardAPIView(APIView):
             })
 
         return Response({"error": "Неизвестная роль"}, status=400)
+
+class MeAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user
+        data = {
+            "username": user.username,
+            "email": user.email,
+            "role": user.role,
+        }
+
+        if user.role == "driver":
+            driver = Driver.objects.get(user=user)
+            data.update({
+                "vehicle_type": driver.vehicle_type,
+                "vehicle_number": driver.vehicle_number,
+                "capacity": driver.capacity,
+            })
+        elif user.role == "store":
+            store = Store.objects.get(user=user)
+            data.update({
+                "address": store.address,
+            })
+        elif user.role == "warehouse":
+            warehouse = Warehouse.objects.get(user=user)
+            data.update({
+                "company_name": warehouse.company_name,
+                "address": warehouse.address,
+            })
+
+        return Response(data)
+
+    def patch(self, request):
+        user = request.user
+        data = request.data
+
+        # Общие поля
+        if 'email' in data:
+            user.email = data['email']
+        if 'password' in data:
+            user.set_password(data['password'])  
+        user.save()
+
+        # Роль-специфичные
+        if user.role == "driver":
+            driver = Driver.objects.get(user=user)
+            driver.vehicle_type = data.get('vehicle_type', driver.vehicle_type)
+            driver.vehicle_number = data.get('vehicle_number', driver.vehicle_number)
+            driver.capacity = data.get('capacity', driver.capacity)
+            driver.save()
+
+        elif user.role == "store":
+            store = Store.objects.get(user=user)
+            store.address = data.get('address', store.address)
+            store.save()
+
+        elif user.role == "warehouse":
+            warehouse = Warehouse.objects.get(user=user)
+            warehouse.company_name = data.get('company_name', warehouse.company_name)
+            warehouse.address = data.get('address', warehouse.address)
+            warehouse.save()
+
+        return Response({"message": "Profile updated successfully ✅"})

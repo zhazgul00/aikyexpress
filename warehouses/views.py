@@ -9,13 +9,27 @@ class IsWarehouse(permissions.BasePermission):
         return request.user.is_authenticated and request.user.role == 'warehouse'
 
 class ProductViewSet(viewsets.ModelViewSet):
-    permission_classes = [IsAuthenticated]
     serializer_class = ProductSerializer
     permission_classes = [IsWarehouse]
 
     def get_queryset(self):
-        warehouse = Warehouse.objects.get(user=self.request.user)
-        return Product.objects.filter(warehouse=warehouse)
+        user = self.request.user
+        warehouse = Warehouse.objects.get(user=user)
+        queryset = Product.objects.filter(warehouse=warehouse)
+
+        name = self.request.query_params.get('name')
+        min_price = self.request.query_params.get('min_price')
+        max_price = self.request.query_params.get('max_price')
+
+        if name:
+            queryset = queryset.filter(name__icontains=name)
+        if min_price:
+            queryset = queryset.filter(price__gte=min_price)
+        if max_price:
+            queryset = queryset.filter(price__lte=max_price)
+
+        return queryset
+
 
     def perform_create(self, serializer):
         warehouse = Warehouse.objects.get(user=self.request.user)

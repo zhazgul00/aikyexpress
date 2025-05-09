@@ -13,23 +13,36 @@ from orders.models import Order
 
 class RegisterAPIView(APIView):
     def post(self, request):
-        role = request.data.get('role')
-        serializer = RegisterSerializer(data=request.data)
+        serializer = RegisterSerializer(data=request.data, context={'request': request})
         if serializer.is_valid():
             user = serializer.save()
-            
+            role = request.data.get('role')
+
+            # Изначально warehouse None
+            warehouse = None
+
+            # 🔐 Безопасная проверка авторизованного склада
+            if request.user.is_authenticated and request.user.role == 'warehouse':
+                try:
+                    warehouse = Warehouse.objects.get(user=request.user)
+                except Warehouse.DoesNotExist:
+                    return Response({'error': 'Склад не найден'}, status=status.HTTP_400_BAD_REQUEST)
+
             if role == 'driver':
                 Driver.objects.create(
                     user=user,
                     vehicle_type=request.data.get('vehicle_type'),
                     vehicle_number=request.data.get('vehicle_number'),
-                    capacity=request.data.get('capacity')
+                    capacity=request.data.get('capacity'),
+                    warehouse=warehouse  # ✅ добавляется, если есть
                 )
+
             elif role == 'store':
                 Store.objects.create(
                     user=user,
                     address=request.data.get('address')
                 )
+
             elif role == 'warehouse':
                 Warehouse.objects.create(
                     user=user,
@@ -37,10 +50,9 @@ class RegisterAPIView(APIView):
                     address=request.data.get('address')
                 )
 
-            return Response({"message": "Пользователь зарегистрирован"}, status=status.HTTP_201_CREATED)
+            return Response({"message": "Пользователь зарегистрирован"}, status=201)
 
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+        return Response(serializer.errors, status=400)
 
 
 class DashboardAPIView(APIView):
@@ -140,4 +152,4 @@ class MeAPIView(APIView):
             warehouse.address = data.get('address', warehouse.address)
             warehouse.save()
 
-        return Response({"message": "Profile updated successfully ✅"})
+        return Response({"message": "Профиль успешно обновлен✅"})

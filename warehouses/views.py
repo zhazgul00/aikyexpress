@@ -2,6 +2,10 @@ from rest_framework import viewsets, permissions
 from .models import Product, Warehouse
 from .serializers import ProductSerializer
 from rest_framework.permissions import IsAuthenticated
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from accounts.models import CustomUser
+from drivers.models import Driver
 
 class IsWarehouse(permissions.BasePermission):
     permission_classes = [IsAuthenticated]
@@ -34,3 +38,39 @@ class ProductViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         warehouse = Warehouse.objects.get(user=self.request.user)
         serializer.save(warehouse=warehouse)
+
+
+class CreateWarehouseDriverAPIView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        user = request.user
+        if user.role != "warehouse":
+            return Response({"error": "Only warehouses can create drivers"}, status=403)
+
+        data = request.data
+        required_fields = ["username", "password", "vehicle_type", "vehicle_number", "capacity"]
+
+        for field in required_fields:
+            if field not in data:
+                return Response({"error": f"Missing field: {field}"}, status=400)
+
+        # 1. Создаём пользователя с ролью driver
+        new_user = CustomUser.objects.create_user(
+            username=data["username"],
+            password=data["password"],
+            role="driver"
+        )
+
+        # 2. Привязываем водителя к складу
+        warehouse = Warehouse.objects.get(user=user)
+
+        Driver.objects.create(
+            user=new_user,
+            vehicle_type=data["vehicle_type"],
+            vehicle_number=data["vehicle_number"],
+            capacity=data["capacity"],
+            warehouse=warehouse
+        )
+
+        return Response({"message": "Driver created and linked to warehouse "}, status=201)

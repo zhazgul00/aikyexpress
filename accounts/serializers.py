@@ -8,22 +8,33 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = CustomUser
-        fields = ('username', 'password', 'password2', 'role')
+        fields = ('username', 'password', 'password2', 'role')  # warehouse_id не указываем!
 
-    def validate(self, data):
-        if data['password'] != data['password2']:
+    def validate(self, attrs):
+        if attrs['password'] != attrs['password2']:
             raise serializers.ValidationError("Пароли не совпадают")
-        return data
+
+        request = self.context.get('request')
+        user = getattr(request, 'user', None)
+        if user and user.is_authenticated and user.role == 'warehouse':
+            if not attrs.get('warehouse_id'):
+                raise serializers.ValidationError({
+                    "warehouse_id": "Это поле обязательно при регистрации от склада."
+                })
+
+        return attrs
 
     def create(self, validated_data):
-        role = validated_data.pop('role')
         password = validated_data.pop('password')
         validated_data.pop('password2')
+        role = validated_data.get('role')
 
-        user = CustomUser.objects.create(role=role, **validated_data)
+        user = CustomUser.objects.create(**validated_data)
         user.set_password(password)
         user.save()
+
         return user
+
 
 
 

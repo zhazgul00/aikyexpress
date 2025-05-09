@@ -4,16 +4,34 @@ from rest_framework import status
 from orders.models import Order
 from .models import Driver
 from rest_framework.permissions import IsAuthenticated
+from orders.serializers import OrderSerializer
 
 class DriverDashboardView(APIView):
-    permission_classes = [IsAuthenticated] 
+    permission_classes = [IsAuthenticated]
 
     def get(self, request):
-        if request.user.role != 'driver':
+        user = request.user
+        if user.role != 'driver':
             return Response({'error': 'Access denied'}, status=403)
 
-        orders = Order.objects.filter(driver=None)
-        return Response({'available_orders': [str(o) for o in orders]})
+        try:
+            driver = Driver.objects.get(user=user)
+
+            if driver.warehouse:
+                # Закреплённый водитель — видит только заказы своего склада
+                orders = Order.objects.filter(
+                    driver=None,
+                    product__warehouse=driver.warehouse
+                )
+            else:
+                #  Общий водитель — видит все свободные заказы
+                orders = Order.objects.filter(driver=None)
+
+            return Response({'available_orders': OrderSerializer(orders, many=True).data})
+
+        except Driver.DoesNotExist:
+            return Response({'error': 'Driver profile not found'}, status=404)
+
 
 class AssignOrderView(APIView):
     def post(self, request, pk):

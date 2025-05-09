@@ -1,9 +1,8 @@
 from django.urls import path
-from .views import RegisterAPIView, DashboardAPIView
+from .views import RegisterAPIView, DashboardAPIView, MeAPIView
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
-    MeAPIView,
 )
 
 

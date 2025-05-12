@@ -6,6 +6,7 @@ from .models import Driver
 from rest_framework.permissions import IsAuthenticated
 from orders.serializers import OrderSerializer
 
+
 class DriverDashboardView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -51,3 +52,19 @@ class AssignOrderView(APIView):
 
         except Order.DoesNotExist:
             return Response({'error': 'Order not found'}, status=404)
+        
+class MyOrdersView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if request.user.role != 'driver':
+            return Response({'error': 'Access denied'}, status=403)
+
+        driver = Driver.objects.get(user=request.user)
+        orders = Order.objects.filter(driver=driver)
+
+        serializer = OrderSerializer(orders, many=True)
+        return Response(serializer.data)
+
+
+

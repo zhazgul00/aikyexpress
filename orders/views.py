@@ -2,7 +2,7 @@ from rest_framework import viewsets
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.decorators import action
 from rest_framework.response import Response  
-
+from rest_framework.views import APIView
 from .models import Order
 from .serializers import OrderSerializer
 from stores.models import Store
@@ -57,7 +57,6 @@ class OrderViewSet(viewsets.ModelViewSet):
             return Response({"message": "Order marked as delivered"})
         except:
             return Response({"error": "Error updating order"}, status=400)
-
 
 
 

@@ -51,6 +51,9 @@ class RegisterAPIView(APIView):
                 )
 
             return Response({"message": "Пользователь зарегистрирован"}, status=201)
+        
+        else:
+            print(serializer.errors)
 
         return Response(serializer.errors, status=400)
 
@@ -153,3 +156,4 @@ class MeAPIView(APIView):
             warehouse.save()
 
         return Response({"message": "Профиль успешно обновлен✅"})
+

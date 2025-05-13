@@ -1,5 +1,5 @@
 from rest_framework import viewsets, permissions
-from .models import Product, Warehouse
+from .models import Product, Warehouse, ProductImage
 from .serializers import ProductSerializer
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.views import APIView
@@ -37,7 +37,10 @@ class ProductViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         warehouse = Warehouse.objects.get(user=self.request.user)
-        serializer.save(warehouse=warehouse)
+        product = serializer.save(warehouse=warehouse)
+
+        for img in self.request.FILES.getlist('images'):
+            ProductImage.objects.create(product=product, image=img)
 
 
 class CreateWarehouseDriverAPIView(APIView):

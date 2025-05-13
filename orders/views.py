@@ -4,12 +4,30 @@ from rest_framework.decorators import action
 from rest_framework.response import Response  
 from rest_framework.views import APIView
 from .models import Order
-from .serializers import OrderSerializer
+from .serializers import OrderSerializer, CreateOrderSerializer
 from stores.models import Store
 from drivers.models import Driver
 
 
+class CreateOrderView(APIView):
+    permission_classes = [IsAuthenticated]
 
+    def post(self, request):
+        if request.user.role != 'store':
+            return Response({'error': 'Only stores can create orders'}, status=403)
+
+        try:
+            store = Store.objects.get(user=request.user)
+        except Store.DoesNotExist:
+            return Response({'error': 'Store profile not found'}, status=404)
+
+        serializer = CreateOrderSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save(store=store, status='NEW')
+            return Response({'message': 'Order created'}, status=201)
+        return Response(serializer.errors, status=400)
+    
+    
 class OrderViewSet(viewsets.ModelViewSet):
     permission_classes = [IsAuthenticated]
     serializer_class = OrderSerializer

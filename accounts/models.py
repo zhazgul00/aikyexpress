@@ -8,4 +8,6 @@ class CustomUser(AbstractUser):
         ('driver', 'Driver'),
     ]
     role = models.CharField(max_length=20, choices=ROLE_CHOICES)
+    email = models.EmailField(blank=True, null=True, default="")
+
 

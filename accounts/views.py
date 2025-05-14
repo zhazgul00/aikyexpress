@@ -110,6 +110,7 @@ class MeAPIView(APIView):
                 "vehicle_type": driver.vehicle_type,
                 "vehicle_number": driver.vehicle_number,
                 "capacity": driver.capacity,
+                "warehouse": driver.warehouse.company_name if driver.warehouse else None,
             })
         elif user.role == "store":
             store = Store.objects.get(user=user)

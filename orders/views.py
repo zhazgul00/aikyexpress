@@ -7,7 +7,7 @@ from .models import Order
 from .serializers import OrderSerializer, CreateOrderSerializer
 from stores.models import Store
 from drivers.models import Driver
-
+from warehouses.models import Warehouse, Product
 
 class CreateOrderView(APIView):
     permission_classes = [IsAuthenticated]
@@ -20,11 +20,25 @@ class CreateOrderView(APIView):
             store = Store.objects.get(user=request.user)
         except Store.DoesNotExist:
             return Response({'error': 'Store profile not found'}, status=404)
+        
+        try:
+            product = Product.objects.get(id=request.data['product'])
+        except Product.DoesNotExist:
+            return Response({'error': 'Product not found'}, status=404)
+
+        order_quantity = int(request.data['quantity'])
+
+        if product.quantity < order_quantity:
+            return Response({'error': 'Недостаточно товара на складе'}, status=400)
 
         serializer = CreateOrderSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save(store=store, status='NEW')
+            product.quantity -= order_quantity
+            product.save()
+
+            serializer.save(store=store, status='new')
             return Response({'message': 'Order created'}, status=201)
+
         return Response(serializer.errors, status=400)
     
     
@@ -39,23 +53,26 @@ class OrderViewSet(viewsets.ModelViewSet):
         if user.role == 'store':
             store = Store.objects.get(user=user)
             qs = Order.objects.filter(store=store)
+
         elif user.role == 'driver':
             driver = Driver.objects.get(user=user)
             qs = Order.objects.filter(driver=driver)
+
+        elif user.role == 'warehouse':
+            warehouse = Warehouse.objects.get(user=user)
+            qs = Order.objects.filter(product__warehouse=warehouse)  
+
         else:
-            qs = Order.objects.all()
+            qs = Order.objects.none()
 
         if status_filter:
             qs = qs.filter(status=status_filter)
 
         return qs
 
-
     def perform_create(self, serializer):
         store = Store.objects.get(user=self.request.user)
         serializer.save(store=store, status='new')
-
-
 
     @action(detail=True, methods=['patch'])
     def deliver(self, request, pk=None):
@@ -75,6 +92,3 @@ class OrderViewSet(viewsets.ModelViewSet):
             return Response({"message": "Order marked as delivered"})
         except:
             return Response({"error": "Error updating order"}, status=400)
-
-
-

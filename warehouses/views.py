@@ -6,6 +6,8 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from accounts.models import CustomUser
 from drivers.models import Driver
+from rest_framework.generics import ListAPIView
+from drivers.serializers import DriverSerializer
 
 class IsWarehouse(permissions.BasePermission):
     permission_classes = [IsAuthenticated]
@@ -77,3 +79,11 @@ class CreateWarehouseDriverAPIView(APIView):
         )
 
         return Response({"message": "Driver created and linked to warehouse "}, status=201)
+
+class WarehouseDriversListAPIView(ListAPIView):
+    permission_classes = [IsAuthenticated]
+    serializer_class = DriverSerializer
+
+    def get_queryset(self):
+        warehouse = Warehouse.objects.get(user=self.request.user)
+        return Driver.objects.filter(warehouse=warehouse)

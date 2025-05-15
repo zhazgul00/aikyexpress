@@ -3,7 +3,7 @@ from .views import OrderViewSet, CreateOrderView
 from rest_framework.routers import DefaultRouter
 
 router = DefaultRouter()
-router.register(r'', OrderViewSet, basename='orders')
+router.register(r'', OrderViewSet, basename='order')
 
 urlpatterns = [
     path('create/', CreateOrderView.as_view(), name='create_order'), 

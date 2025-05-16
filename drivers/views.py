@@ -19,16 +19,15 @@ class DriverDashboardView(APIView):
             driver = Driver.objects.get(user=user)
 
             if driver.warehouse:
-                # Закреплённый водитель — видит только заказы своего склада
                 orders = Order.objects.filter(
                     driver=None,
                     product__warehouse=driver.warehouse
                 )
             else:
-                #  Общий водитель — видит все свободные заказы
                 orders = Order.objects.filter(driver=None)
 
-            return Response({'available_orders': OrderSerializer(orders, many=True).data})
+            # Возвращаем список напрямую
+            return Response(OrderSerializer(orders, many=True).data)
 
         except Driver.DoesNotExist:
             return Response({'error': 'Driver profile not found'}, status=404)
@@ -66,5 +65,28 @@ class MyOrdersView(APIView):
         serializer = OrderSerializer(orders, many=True)
         return Response(serializer.data)
 
+class MarkOrderDeliveredView(APIView):
+    permission_classes = [IsAuthenticated]
 
+    def post(self, request, pk):
+        user = request.user
+        if user.role != 'driver':
+            return Response({'error': 'Access denied'}, status=403)
+
+        try:
+            driver = Driver.objects.get(user=user)
+            order = Order.objects.get(pk=pk, driver=driver)
+
+            if order.status == 'delivered':
+                return Response({'error': 'Заказ уже завершён'}, status=400)
+
+            order.status = 'delivered'
+            order.save()
+
+            return Response({'message': 'Заказ отмечен как доставленный'})
+
+        except Driver.DoesNotExist:
+            return Response({'error': 'Профиль водителя не найден'}, status=404)
+        except Order.DoesNotExist:
+            return Response({'error': 'Заказ не найден'}, status=404)
 
